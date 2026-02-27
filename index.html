@@ -544,7 +544,8 @@
                     movies: ['全部', '爱在黎明破晓前', '白日梦想家', '迷失东京', '布达佩斯大饭店'],
                     categories: ['全部', '机场航班', '交通出行', '酒店住宿', '餐饮娱乐', '观光游览', '购物消费', '社交搭讪', '求助沟通', '求助应急', '行李物品', '出行准备'],
                     showToast: false,
-                    synth: window.speechSynthesis
+                    synth: null,
+                    synthInitialized: false
                 }
             },
             computed: {
@@ -596,13 +597,56 @@
                     }, 2500);
                 },
                 speak(text) {
+                    // 初始化speechSynthesis
+                    if (!this.synth) {
+                        this.synth = window.speechSynthesis;
+                    }
+                    
+                    // 取消正在进行的语音
                     if (this.synth.speaking) {
                         this.synth.cancel();
                     }
-                    const utterThis = new SpeechSynthesisUtterance(text);
-                    utterThis.lang = 'en-US';
-                    utterThis.rate = 0.9; // 稍微放慢语速方便跟读
-                    this.synth.speak(utterThis);
+                    
+                    try {
+                        // 移动端需要用户交互才能初始化，首次点击时触发
+                        if (!this.synthInitialized) {
+                            // 先创建一个空的语音对象来初始化
+                            const initUtterance = new SpeechSynthesisUtterance('');
+                            this.synth.speak(initUtterance);
+                            // 立即取消，只是为了初始化
+                            setTimeout(() => {
+                                this.synth.cancel();
+                                this.synthInitialized = true;
+                                // 初始化后重新调用speak
+                                this.speak(text);
+                            }, 100);
+                            return;
+                        }
+                        
+                        const utterThis = new SpeechSynthesisUtterance(text);
+                        utterThis.lang = 'en-US';
+                        utterThis.rate = 0.9; // 稍微放慢语速方便跟读
+                        
+                        // 处理语音结束事件
+                        utterThis.onend = function(event) {
+                            console.log('语音播放完成');
+                        };
+                        
+                        // 处理错误事件
+                        utterThis.onerror = function(event) {
+                            console.error('语音播放错误:', event);
+                        };
+                        
+                        this.synth.speak(utterThis);
+                    } catch (error) {
+                        console.error('语音合成错误:', error);
+                        // 移动端可能需要用户交互才能初始化，尝试触发一次
+                        if (error.name === 'NotAllowedError' || error.message.includes('not allowed')) {
+                            console.log('需要用户交互来初始化语音合成');
+                            // 尝试重新初始化
+                            this.synthInitialized = false;
+                        }
+                    }
                 }
             },
             mounted() {
