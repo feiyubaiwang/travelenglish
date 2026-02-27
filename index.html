@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电影中的旅行英语</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            DEFAULT: '#8BAE4C',
+                            light: '#a3c466',
+                            dark: '#73933c',
+                            50: '#f4f8ee',
+                            100: '#e5f0d4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #fafaf9;
+            color: #292524;
+        }
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8BAE4C; 
+        }
+        .glass-header {
+            background: rgba(250, 250, 249, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(139, 174, 76, 0.2);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(139, 174, 76, 0.25);
+            border-color: #8BAE4C;
+        }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+    <div id="app" v-cloak class="flex-1 flex flex-col">
+        <!-- Header -->
+        <header class="glass-header sticky top-0 z-50 w-full px-6 py-4">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-theme text-white flex items-center justify-center shadow-lg shadow-theme/30">
+                        <i data-lucide="plane-takeoff" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight text-stone-800">Travel English</h1>
+                        <p class="text-xs text-theme font-medium tracking-wider uppercase">电影中的旅行英语</p>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="relative w-full md:w-96 group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="w-5 h-5 text-stone-400 group-focus-within:text-theme transition-colors"></i>
+                    </div>
+                    <input 
+                        v-model="searchQuery" 
+                        type="text" 
+                        placeholder="搜索中英文台词、场景..." 
+                        class="block w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-full text-sm placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-theme/50 focus:border-theme shadow-sm transition-all"
+                    >
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
+            
+            <!-- Filters -->
+            <div class="mb-8 space-y-6">
+                <!-- Movie Filter -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm font-medium text-stone-500 mr-2 flex items-center gap-1">
+                        <i data-lucide="film" class="w-4 h-4"></i> 电影来源:
+                    </span>
+                    <button 
+                        v-for="movie in movies" 
+                        :key="movie"
+                        @click="selectedMovie = movie"
+                        :class="['px-4 py-1.5 rounded-full text-sm font-medium transition-colors', 
+                                selectedMovie === movie ? 'bg-theme text-white shadow-md shadow-theme/20' : 'bg-white text-stone-600 border border-stone-200 hover:border-theme hover:text-theme']"
+                    >
+                        {{ movie }}
+                    </button>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm font-medium text-stone-500 mr-2 flex items-center gap-1">
+                        <i data-lucide="map" class="w-4 h-4"></i> 场景分类:
+                    </span>
+                    <button 
+                        v-for="cat in categories" 
+                        :key="cat"
+                        @click="selectedCategory = cat"
+                        :class="['px-4 py-1.5 rounded-full text-sm font-medium transition-colors', 
+                                selectedCategory === cat ? 'bg-stone-800 text-white shadow-md' : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-800 hover:text-stone-800']"
+                    >
+                        {{ cat }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="mb-6 flex justify-between items-end">
+                <p class="text-sm text-stone-500">
+                    共找到 <span class="font-bold text-theme text-lg">{{ filteredCorpus.length }}</span> 句地道表达
+                </p>
+            </div>
+
+            <!-- Grid -->
+            <div v-if="filteredCorpus.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div 
+                    v-for="(item, index) in filteredCorpus" 
+                    :key="index"
+                    class="bg-white rounded-2xl p-6 border border-stone-100 card-hover flex flex-col justify-between h-full"
+                >
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-theme-50 text-theme-dark border border-theme-100">
+                                {{ item.c }}
+                            </span>
+                            <span class="text-xs text-stone-400 font-medium bg-stone-100 px-2 py-1 rounded">
+                                《{{ item.m }}》
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-serif text-stone-800 mb-3 leading-snug">
+                            "{{ item.en }}"
+                        </h3>
+                        <p class="text-sm text-stone-500 mb-6">
+                            {{ item.zh }}
+                        </p>
+                    </div>
+                    
+                    <div class="flex items-center justify-end gap-2 pt-4 border-t border-stone-50">
+                        <button 
+                            @click="speak(item.en)" 
+                            class="p-2 text-stone-400 hover:text-theme hover:bg-theme-50 rounded-full transition-colors tooltip-btn"
+                            title="朗读"
+                        >
+                            <i data-lucide="volume-2" class="w-5 h-5"></i>
+                        </button>
+                        <button 
+                            @click="copyText(item.en, item.zh, $event)" 
+                            class="p-2 text-stone-400 hover:text-theme hover:bg-theme-50 rounded-full transition-colors relative"
+                            title="复制"
+                        >
+                            <i data-lucide="copy" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-else class="text-center py-20">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-stone-100 mb-4">
+                    <i data-lucide="inbox" class="w-8 h-8 text-stone-400"></i>
+                </div>
+                <h3 class="text-lg font-medium text-stone-900">没有找到相关的表达</h3>
+                <p class="mt-1 text-sm text-stone-500">尝试更换搜索词或筛选条件</p>
+            </div>
+        </main>
+        
+        <!-- Toast Notification -->
+        <div 
+            v-if="showToast" 
+            class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-stone-800 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-2 transition-all duration-300 z-50"
+        >
+            <i data-lucide="check-circle-2" class="w-5 h-5 text-theme-light"></i>
+            <span class="text-sm font-medium">内容已复制到剪贴板</span>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        // 生成 300 条语料 (基于《爱在黎明破晓前》、《白日梦想家》、《迷失东京》、《布达佩斯大饭店》)
+        const corpusData = [
+            // ========== 爱在黎明破晓前 (Before Sunrise) ==========
+            { en: "Do you speak English?", zh: "你会说英语吗？", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "I was thinking about going to the lounge car sometime soon.", zh: "我想一会儿去餐车待会儿。", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "Would you like to come with me?", zh: "你想和我一起去吗？", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "Are you coming from Budapest?", zh: "你从布达佩斯来的吗？", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "I'm flying out of there tomorrow.", zh: "我明天从那里乘飞机离开。", m: "爱在黎明破晓前", c: "机场航班" },
+            { en: "Are you on holiday?", zh: "你在度假吗？", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "I'm just traveling around. I've been riding the trains the past two, three weeks.", zh: "我只是四处转转。过去两三周我一直在坐火车。", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "I got one of those Eurail passes, is what I did.", zh: "我买了一张欧洲通票。", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "Where are you headed?", zh: "你打算去哪里？", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "Well, back to Paris. My classes start next week.", zh: "回巴黎。我下周开学。", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "I think this is Vienna. You get off here, no?", zh: "我觉得这里是维也纳。你在这里下车，对吧？", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "You should get off the train with me here in Vienna and come check out the town.", zh: "你应该和我在维也纳下车，一起来逛逛这座城市。", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "I don't have enough money for a hotel.", zh: "我没有足够的钱住酒店。", m: "爱在黎明破晓前", c: "酒店住宿" },
+            { en: "Let me get my bag.", zh: "让我拿一下我的包。", m: "爱在黎明破晓前", c: "行李物品" },
+            { en: "We should get a locker for all this stuff.", zh: "我们应该找个储物柜把这些东西存起来。", m: "爱在黎明破晓前", c: "行李物品" },
+            { en: "Listen, we just got into Vienna today and we're looking for something fun to do.", zh: "听着，我们今天刚到维也纳，想找点有趣的事做。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "Like museums, exhibitions.", zh: "比如博物馆、展览之类的。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "How long are you going to be here?", zh: "你们打算在这里待多久？", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "Just for tonight.", zh: "只待今晚。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "This is a nice bridge.", zh: "这座桥很不错。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "Could you speak German for a change?", zh: "你能换用德语说吗？", m: "爱在黎明破晓前", c: "求助沟通" },
+            { en: "There's even a listening booth over there.", zh: "那边甚至有个试听棚。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "Do you wanna go and see if that listening booth still works?", zh: "你想去看看那个试听棚还能用吗？", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "How old are these?", zh: "这些有多久历史了？", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "Around the beginning of the century or so.", zh: "大概是世纪初的时候吧。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "That's the Danube over there.", zh: "那边是多瑙河。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "Yeah, this is beautiful. And we got a sunset here.", zh: "是的，这里很美。我们还赶上了日落。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "Look at this palm reader. She's interesting-looking, no?", zh: "看那个看手相的。她看起来挺有趣的，不是吗？", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "How much is it?", zh: "多少钱？", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "For you, 50. Okay?", zh: "算你50。行吗？", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "Fifty schillings, please.", zh: "请付五十先令。", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "Oh, there's an exhibition.", zh: "哦，那里有个展览。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "You think this is open? I don't know. Let's try it.", zh: "你觉得这里开门吗？不知道，我们试试吧。", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "You want to go in here? It's a club, no?", zh: "你想进去吗？这是一家俱乐部吧？", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "Fifty schillings each.", zh: "每人五十先令。", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "I got a hundred. Here. I got it.", zh: "我有100。给。我来付。", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "I'll buy you a beer.", zh: "我请你喝杯啤酒。", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "Are you gonna buy me a beer?", zh: "你要请我喝啤酒吗？", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "Look at the service. Where is the waitress?", zh: "看看这服务。服务员去哪了？", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "You're gonna grab the glasses and I'm gonna get the wine.", zh: "你去拿杯子，我去拿酒。", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "Do you speak English? A bit.", zh: "你会说英语吗？一点点。", m: "爱在黎明破晓前", c: "求助沟通" },
+            { en: "She wants a bottle of red wine.", zh: "她想要一瓶红酒。", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "I would promise to send you the money.", zh: "我保证会把钱寄给你。", m: "爱在黎明破晓前", c: "求助沟通" },
+            { en: "Okay. You know what bus you're taking to the airport, right?", zh: "好了。你知道你要坐哪趟巴士去机场，对吧？", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "I should get on this one.", zh: "我应该上这辆车。", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "Right here? You wanna get on that one?", zh: "就在这儿？你想上那辆吗？", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "All right. Your train's gonna leave.", zh: "好了，你的火车要开了。", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "Say good-bye.", zh: "说再见吧。", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "I bought the cheapest flight out of Europe.", zh: "我买了离开欧洲最便宜的机票。", m: "爱在黎明破晓前", c: "机场航班" },
+            { en: "I'm going to Vienna.", zh: "我要去维也纳。", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "Can I ask you for directions?", zh: "能向你问个路吗？", m: "爱在黎明破晓前", c: "求助沟通" },
+            { en: "Is this seat taken?", zh: "这个座位有人吗？", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "Do you mind if I sit here?", zh: "介意我坐这儿吗？", m: "爱在黎明破晓前", c: "社交搭讪" },
+            { en: "Can we have the menu, please?", zh: "请给我们看一下菜单好吗？", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "I'd like to order a coffee.", zh: "我想点一杯咖啡。", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "Keep the change.", zh: "不用找了。", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "Excuse me, where is the nearest restroom?", zh: "打扰一下，请问最近的洗手间在哪里？", m: "爱在黎明破晓前", c: "求助沟通" },
+            { en: "We are just looking around.", zh: "我们只是随便逛逛。", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "Could you take a picture for us?", zh: "能帮我们拍张照吗？", m: "爱在黎明破晓前", c: "观光游览" },
+            { en: "What time does the next train arrive?", zh: "下一趟火车几点到？", m: "爱在黎明破晓前", c: "交通出行" },
+            { en: "I have to catch a flight tomorrow morning.", zh: "我明早得赶飞机。", m: "爱在黎明破晓前", c: "机场航班" },
+            { en: "Do you know a good place to eat?", zh: "你知道哪里有好吃的地方吗？", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "I'll pay by cash.", zh: "我付现金。", m: "爱在黎明破晓前", c: "购物消费" },
+            { en: "Let's split the bill.", zh: "我们AA制吧。", m: "爱在黎明破晓前", c: "餐饮娱乐" },
+            { en: "Can you point it out on the map?", zh: "你能在地图上指给我看吗？", m: "爱在黎明破晓前", c: "求助沟通" },
+            { en: "It was really nice talking to you.", zh: "和你聊天真的很开心。", m: "爱在黎明破晓前", c: "社交搭讪" },
+
+            // ========== 白日梦想家 (The Secret Life of Walter Mitty) ==========
+            { en: "Have you done anything noteworthy or mentionable?", zh: "你做过什么值得一提或引人注目的事吗？", m: "白日梦想家", c: "社交搭讪" },
+            { en: "Do you have any cars available?", zh: "你们这里有车可以租吗？", m: "白日梦想家", c: "交通出行" },
+            { en: "We have a blue one and a red one.", zh: "我们有一辆蓝色的和一辆红色的。", m: "白日梦想家", c: "交通出行" },
+            { en: "I'll take the red one.", zh: "我要那辆红色的。", m: "白日梦想家", c: "交通出行" },
+            { en: "Is there a larger apartment available?", zh: "有更大的公寓可以租吗？", m: "白日梦想家", c: "酒店住宿" },
+            { en: "Could someone receive mail here? An American?", zh: "这里能代收邮件吗？一个美国人的？", m: "白日梦想家", c: "求助沟通" },
+            { en: "Where do we land?", zh: "我们在哪里降落？", m: "白日梦想家", c: "机场航班" },
+            { en: "We don't. We don't land.", zh: "我们不降落。我们没法降落。", m: "白日梦想家", c: "机场航班" },
+            { en: "Just jump in the boat.", zh: "直接跳进船里。", m: "白日梦想家", c: "交通出行" },
+            { en: "I'm on a business trip. I'm working.", zh: "我在出差。我在工作。", m: "白日梦想家", c: "社交搭讪" },
+            { en: "I'm flying some radio parts out there in five minutes.", zh: "我五分钟后要空投一些无线电零件到那里。", m: "白日梦想家", c: "机场航班" },
+            { en: "You guys speak English?", zh: "你们会说英语吗？", m: "白日梦想家", c: "求助沟通" },
+            { en: "I'm looking for Eldgos Street.", zh: "我在找Eldgos街。", m: "白日梦想家", c: "求助沟通" },
+            { en: "The hotel is closed.", zh: "酒店关门了。", m: "白日梦想家", c: "酒店住宿" },
+            { en: "Is it straight down that way?", zh: "是一直往前走吗？", m: "白日梦想家", c: "求助沟通" },
+            { en: "I got a plane for him. At 1:00, there. 15 minutes.", zh: "我给他安排了一架飞机。1点钟，在那边。15分钟路程。", m: "白日梦想家", c: "机场航班" },
+            { en: "He's at airfield in Stykkisholmur.", zh: "他在斯蒂基斯霍尔米的机场。", m: "白日梦想家", c: "机场航班" },
+            { en: "You can take the shore bike, but you better get going.", zh: "你可以骑那辆海滩自行车，但你最好马上出发。", m: "白日梦想家", c: "交通出行" },
+            { en: "Thanks for coming back for me. I really appreciate it.", zh: "谢谢你回来接我。我非常感激。", m: "白日梦想家", c: "求助沟通" },
+            { en: "There's a motel near the pizza place there.", zh: "披萨店附近有一家汽车旅馆。", m: "白日梦想家", c: "酒店住宿" },
+            { en: "I got on a fishing vessel tracking Sean, and ended up here in Iceland.", zh: "为了找肖恩我上了一艘渔船，结果来到了冰岛。", m: "白日梦想家", c: "交通出行" },
+            { en: "I went to Greenland...", zh: "我去了格陵兰岛...", m: "白日梦想家", c: "观光游览" },
+            { en: "How did you get to Afghanistan? There's a travel ban.", zh: "你是怎么去阿富汗的？那里有旅行禁令。", m: "白日梦想家", c: "交通出行" },
+            { en: "Through Yemen.", zh: "穿过也门。", m: "白日梦想家", c: "交通出行" },
+            { en: "That's why the air fare's only $84.", zh: "所以机票才84美元。", m: "白日梦想家", c: "机场航班" },
+            { en: "I have to make oxygen choices.", zh: "我得节省氧气（长话短说）。", m: "白日梦想家", c: "求助应急" },
+            { en: "I jumped out of a helicopter yesterday into the ocean.", zh: "我昨天从直升机跳进了海里。", m: "白日梦想家", c: "求助应急" },
+            { en: "I'll check the mailroom.", zh: "我去收发室查一下。", m: "白日梦想家", c: "酒店住宿" },
+            { en: "Do you have an address for Sean O'Connell?", zh: "你有肖恩·奥康奈尔的地址吗？", m: "白日梦想家", c: "求助沟通" },
+            { en: "I don't know where, and he doesn't have a phone.", zh: "我不知道在哪，而且他没有电话。", m: "白日梦想家", c: "求助沟通" },
+            { en: "We helicopter mail to the ships when they pass by.", zh: "当船只经过时，我们用直升机给他们送信。", m: "白日梦想家", c: "交通出行" },
+            { en: "I just want to get a couple of beers down.", zh: "我只想喝两杯啤酒。", m: "白日梦想家", c: "餐饮娱乐" },
+            { en: "Looks like there's a storm moving in.", zh: "看样子暴风雨要来了。", m: "白日梦想家", c: "求助应急" },
+            { en: "I'm flying out right now.", zh: "我现在就要起飞。", m: "白日梦想家", c: "机场航班" },
+            { en: "Hold on tight!", zh: "抓紧了！", m: "白日梦想家", c: "交通出行" },
+            { en: "Try to remain calm!", zh: "尽量保持冷静！", m: "白日梦想家", c: "求助应急" },
+            { en: "The pontoon boat is coming for you.", zh: "浮筒船正朝你开过来。", m: "白日梦想家", c: "求助应急" },
+            { en: "A pilot boat came. They took him four hours ago.", zh: "来了一艘引航船。他们四小时前把他接走了。", m: "白日梦想家", c: "交通出行" },
+            { en: "Is there any way that we could possibly land in Iceland?", zh: "我们有可能在冰岛降落吗？", m: "白日梦想家", c: "机场航班" },
+            { en: "Yeah, we have to in the morning.", zh: "是的，我们明早必须降落。", m: "白日梦想家", c: "机场航班" },
+            { en: "I have to get to Eyjafjallajokull.", zh: "我得去埃亚菲亚德拉冰盖。", m: "白日梦想家", c: "交通出行" },
+            { en: "It's 15 kilometers. All right, okay.", zh: "有15公里。好的，没问题。", m: "白日梦想家", c: "交通出行" },
+            { en: "There's only one bike. Hurry, run!", zh: "只有一辆自行车。快点，跑！", m: "白日梦想家", c: "交通出行" },
+            { en: "Would you maybe want to make a trade?", zh: "你想交换一下东西吗？", m: "白日梦想家", c: "购物消费" },
+            { en: "I think that he possibly might have stayed here.", zh: "我觉得他可能曾住在这里。", m: "白日梦想家", c: "酒店住宿" },
+            { en: "Faster! Go faster!", zh: "快点！开快点！", m: "白日梦想家", c: "交通出行" },
+            { en: "I hope you find your man. Good luck.", zh: "希望你能找到你要找的人。祝你好运。", m: "白日梦想家", c: "社交搭讪" },
+            { en: "I'm at a Papa John's.", zh: "我在棒约翰。", m: "白日梦想家", c: "餐饮娱乐" },
+            { en: "I just had to... just left.", zh: "我不得不...刚才离开了。", m: "白日梦想家", c: "交通出行" },
+            { en: "I was right on Sean's trail. Then I lost him.", zh: "我本来紧紧跟着肖恩的踪迹。结果跟丢了。", m: "白日梦想家", c: "观光游览" },
+            { en: "It's really beautiful.", zh: "这地方真美。", m: "白日梦想家", c: "观光游览" },
+            { en: "I'm just going to enjoy it.", zh: "我打算好好享受一下。", m: "白日梦想家", c: "观光游览" },
+            { en: "He said he wants to photograph snow leopards.", zh: "他说他想去拍雪豹。", m: "白日梦想家", c: "观光游览" },
+            { en: "How the hell did you get up here?", zh: "你到底是怎么上来的？", m: "白日梦想家", c: "观光游览" },
+            { en: "Sit down. Settle in.", zh: "坐下吧。安顿下来。", m: "白日梦想家", c: "酒店住宿" },
+            { en: "How long were you detained for, by the way?", zh: "顺便问一下，你被拘留了多久？", m: "白日梦想家", c: "机场航班" },
+            { en: "Like, 17 hours.", zh: "大概17个小时。", m: "白日梦想家", c: "机场航班" },
+            { en: "Do I need a visa to go there?", zh: "去那里需要签证吗？", m: "白日梦想家", c: "机场航班" }, 
+            { en: "Can I rent a bicycle here?", zh: "我可以在这里租自行车吗？", m: "白日梦想家", c: "交通出行" }, 
+            { en: "Is it safe to travel alone?", zh: "一个人旅行安全吗？", m: "白日梦想家", c: "求助应急" }, 
+            { en: "Where is the rental car counter?", zh: "租车柜台在哪里？", m: "白日梦想家", c: "交通出行" }, 
+            { en: "I need full insurance cover.", zh: "我需要全险。", m: "白日梦想家", c: "交通出行" }, 
+            { en: "Is there a gas station nearby?", zh: "附近有加油站吗？", m: "白日梦想家", c: "交通出行" }, 
+            { en: "We need a tow truck.", zh: "我们需要一辆拖车。", m: "白日梦想家", c: "求助应急" }, 
+            { en: "My luggage is missing.", zh: "我的行李丢了。", m: "白日梦想家", c: "机场航班" }, 
+
+            // ========== 迷失东京 (Lost in Translation) ==========
+            { en: "Welcome to New Tokyo International Airport.", zh: "欢迎来到新东京国际机场。", m: "迷失东京", c: "机场航班" },
+            { en: "Welcome to Tokyo. Thank you very much.", zh: "欢迎来到东京。非常感谢。", m: "迷失东京", c: "机场航班" },
+            { en: "And we will pick you up in the morning?", zh: "我们明早来接您？", m: "迷失东京", c: "交通出行" },
+            { en: "See you tomorrow.", zh: "明天见。", m: "迷失东京", c: "社交搭讪" },
+            { en: "Get some sleep, will you? You're all really tired, I'm sure.", zh: "睡个好觉好吗？我肯定你们都很累了。", m: "迷失东京", c: "酒店住宿" },
+            { en: "Mr. Harris, welcome to Park Hyatt Tokyo.", zh: "哈里斯先生，欢迎入住东京柏悦酒店。", m: "迷失东京", c: "酒店住宿" },
+            { en: "Enjoy your stay with us.", zh: "祝您在我们这里住得愉快。", m: "迷失东京", c: "酒店住宿" },
+            { en: "This way, please.", zh: "这边请。", m: "迷失东京", c: "酒店住宿" },
+            { en: "Finish this drink, then we'll go to a jazz club.", zh: "喝完这杯，我们就去爵士俱乐部。", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "We're here on business.", zh: "我们是来出差的。", m: "迷失东京", c: "社交搭讪" },
+            { en: "I went to this shrine today.", zh: "我今天去了一个神社。", m: "迷失东京", c: "观光游览" },
+            { en: "Welcome back, Mr. Harris.", zh: "欢迎回来，哈里斯先生。", m: "迷失东京", c: "酒店住宿" },
+            { en: "Do you like massage?", zh: "你需要按摩吗？", m: "迷失东京", c: "酒店住宿" },
+            { en: "Can you stay here until Friday?", zh: "你能在这里待到周五吗？", m: "迷失东京", c: "酒店住宿" },
+            { en: "I gotta be on a plane Thursday night.", zh: "我周四晚上得赶飞机。", m: "迷失东京", c: "机场航班" },
+            { en: "You're scheduled to leave Friday, but we'll hold it for you Saturday.", zh: "你原计划周五离开，但我们会为你保留到周六。", m: "迷失东京", c: "机场航班" },
+            { en: "Send these over to that table over there.", zh: "把这些送到那边那桌去。", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "Car is outside. Shall we go?", zh: "车在外面了。我们走吧？", m: "迷失东京", c: "交通出行" },
+            { en: "How long are you gonna be here? We're here for a week.", zh: "你要在这里待多久？我们在这里待一周。", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'm gonna go shoot in Fukawaka.", zh: "我要去深川拍照。", m: "迷失东京", c: "观光游览" },
+            { en: "Let's all go out for a drink sometime.", zh: "有空我们一起出去喝一杯吧。", m: "迷失东京", c: "社交搭讪" },
+            { en: "Listen, I'm under Evelyn Waugh.", zh: "听着，我登记的名字是伊夫林·沃。", m: "迷失东京", c: "酒店住宿" },
+            { en: "What can I get you?", zh: "你想喝点什么？", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "I'll have a vodka tonic. Thanks.", zh: "给我一杯伏特加汤力水。谢谢。", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "What are you doing here?", zh: "你在这里做什么？", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'm taking a break from my wife.", zh: "我出来透透气，暂时离开我老婆。", m: "迷失东京", c: "社交搭讪" },
+            { en: "My husband's a photographer, so he's here working, and I came along.", zh: "我丈夫是个摄影师，他在这里工作，我就跟着来了。", m: "迷失东京", c: "社交搭讪" },
+            { en: "Cheers to that?", zh: "为此干杯？", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "Wish I could sleep.", zh: "真希望能睡得着。", m: "迷失东京", c: "酒店住宿" },
+            { en: "I gotta go downstairs and meet Kelly for some drinks.", zh: "我得下楼去见凯莉喝几杯。", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "You wanna come?", zh: "你想来吗？", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'm trying to organize a prison break. I'm looking for an accomplice.", zh: "我在密谋越狱，正找同谋呢。（约人出去玩的幽默说法）", m: "迷失东京", c: "社交搭讪" },
+            { en: "We'd have to, first, get out of this bar. Then the hotel, then the city and then the country.", zh: "我们首先得离开这家酒吧，然后是酒店，再然后是城市，最后是这个国家。", m: "迷失东京", c: "社交搭讪" },
+            { en: "Are you in, or are you out?", zh: "你加入还是退出？", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'm in.", zh: "我加入。", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'll go pack my stuff.", zh: "我去收拾东西。", m: "迷失东京", c: "行李物品" },
+            { en: "Get your coat.", zh: "拿上你的外套。", m: "迷失东京", c: "出行准备" },
+            { en: "I'll be back on Sunday.", zh: "我周日回来。", m: "迷失东京", c: "交通出行" },
+            { en: "How long you staying for?", zh: "你打算待多久？", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'm going out with some friends later, if you wanna come...", zh: "我晚点要和朋友出去，如果你想来的话...", m: "迷失东京", c: "社交搭讪" },
+            { en: "Where's your room key?", zh: "你的房间钥匙呢？", m: "迷失东京", c: "酒店住宿" },
+            { en: "It's in my bag.", zh: "在我的包里。", m: "迷失东京", c: "行李物品" },
+            { en: "Let's go.", zh: "我们走吧。", m: "迷失东京", c: "交通出行" },
+            { en: "There's the elevator. I gotta go.", zh: "电梯在那边。我得走了。", m: "迷失东京", c: "酒店住宿" },
+            { en: "Nice to meet you. How are you?", zh: "很高兴认识你。你好吗？", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'll be right back.", zh: "我马上回来。", m: "迷失东京", c: "社交搭讪" },
+            { en: "My Japanese is getting better.", zh: "我的日语越来越好了。", m: "迷失东京", c: "求助沟通" },
+            { en: "Last weekend, I went surfing.", zh: "上周末，我去冲浪了。", m: "迷失东京", c: "观光游览" },
+            { en: "I called down and had a shiatsu massage in my room.", zh: "我打电话叫了客房指压按摩。", m: "迷失东京", c: "酒店住宿" },
+            { en: "I think I gotta take you to a doctor.", zh: "我觉得我得带你去看医生。", m: "迷失东京", c: "求助应急" },
+            { en: "We need a doctor. Emergency room.", zh: "我们需要医生。急诊室。", m: "迷失东京", c: "求助应急" },
+            { en: "It's not an emergency. I just hurt my foot.", zh: "不是急诊。我只是伤了脚。", m: "迷失东京", c: "求助应急" },
+            { en: "Okay, do we fill this out? We go over there?", zh: "好的，我们要填这个表格吗？我们要去那边吗？", m: "迷失东京", c: "求助应急" },
+            { en: "Could you put that back in the garage for us?", zh: "你能帮我们把那个放回车库吗？", m: "迷失东京", c: "酒店住宿" },
+            { en: "I'm going to meet Charlie and those guys at this place called Orange around 10:00", zh: "我大概10点会在一个叫Orange的地方和查理他们碰面。", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'll fax you a map on how to get there.", zh: "我会传真给你一份怎么去那里的地图。", m: "迷失东京", c: "求助沟通" },
+            { en: "Can I get you a couple drinks?", zh: "能给你们买几杯酒吗？", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "Are you ready? Come on.", zh: "准备好了吗？走吧。", m: "迷失东京", c: "交通出行" },
+            { en: "A fax for you.", zh: "有一份您的传真。", m: "迷失东京", c: "酒店住宿" },
+            { en: "Can you send it up?", zh: "能送上来吗？", m: "迷失东京", c: "酒店住宿" },
+            { en: "Do you think you could slide it under the door for me, please?", zh: "麻烦你能把它从门缝底下塞进来吗？", m: "迷失东京", c: "酒店住宿" },
+            { en: "I would love to change my plans and stay.", zh: "我很乐意改变计划留下来。", m: "迷失东京", c: "酒店住宿" },
+            { en: "I would like to start eating healthier, like Japanese food.", zh: "我想开始吃得健康点，比如日本菜。", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "Travel safely. I'll see you soon.", zh: "路上注意安全。很快见。", m: "迷失东京", c: "机场航班" },
+            { en: "I'm switching to beer. Okay?", zh: "我要换成喝啤酒。行吗？", m: "迷失东京", c: "餐饮娱乐" },
+            { en: "When are you leaving? Tomorrow.", zh: "你什么时候走？明天。", m: "迷失东京", c: "机场航班" },
+            { en: "I don't want to leave. So don't. Stay here with me.", zh: "我不想走。那就别走，留下来陪我。", m: "迷失东京", c: "社交搭讪" },
+            { en: "Good morning, Mr. Harris. Have a nice flight.", zh: "早上好，哈里斯先生。祝您飞行愉快。", m: "迷失东京", c: "机场航班" },
+            { en: "I'll be one minute.", zh: "我一分钟就来（马上就好）。", m: "迷失东京", c: "社交搭讪" },
+            { en: "I'm down in the lobby, and I'm leaving now.", zh: "我在大堂了，现在就准备出发。", m: "迷失东京", c: "酒店住宿" },
+            { en: "Enjoy your trip? I had a great time.", zh: "旅途愉快吗？我玩得很开心。", m: "迷失东京", c: "社交搭讪" },
+            { en: "Aren't you Bob Harris? I'm such a big fan.", zh: "你是鲍勃·哈里斯吗？我是你的超级粉丝。", m: "迷失东京", c: "社交搭讪" },
+            { en: "What are you doing here in Japan? I have to go right now.", zh: "你在日本做什么？我现在必须走了。", m: "迷失东京", c: "社交搭讪" },
+            { en: "Thought I'd missed you. Are you going right now?", zh: "以为错过你了。你现在就走吗？", m: "迷失东京", c: "社交搭讪" },
+            { en: "Can I take one more picture? Sure.", zh: "能再拍一张照吗？当然。", m: "迷失东京", c: "观光游览" },
+            { en: "Hey, hold on here. Let me out. Thank you.", zh: "嘿，在这里停一下。让我下车。谢谢。", m: "迷失东京", c: "交通出行" },
+            { en: "I'd like to check out, please.", zh: "我想退房，谢谢。", m: "迷失东京", c: "酒店住宿" }, 
+            { en: "Could you call a taxi for me?", zh: "能帮我叫辆出租车吗？", m: "迷失东京", c: "交通出行" }, 
+            { en: "Where is the departure gate?", zh: "登机口在哪里？", m: "迷失东京", c: "机场航班" }, 
+            { en: "I have jet lag. I can't sleep.", zh: "我有时差反应。我睡不着。", m: "迷失东京", c: "酒店住宿" }, 
+            { en: "Could I have a wake-up call at 6 AM?", zh: "明早6点能给我打个叫醒电话吗？", m: "迷失东京", c: "酒店住宿" }, 
+            { en: "Can I leave my luggage here after check-out?", zh: "退房后我可以把行李寄存在这里吗？", m: "迷失东京", c: "行李物品" }, 
+            { en: "Is there free Wi-Fi in the room?", zh: "房间里有免费Wi-Fi吗？", m: "迷失东京", c: "酒店住宿" }, 
+
+            // ========== 布达佩斯大饭店 (The Grand Budapest Hotel) ==========
+            { en: "I decided to spend the month of August in the spa town.", zh: "我决定在温泉小镇度过八月。", m: "布达佩斯大饭店", c: "观光游览" },
+            { en: "And had taken up rooms in the Grand Budapest.", zh: "并在布达佩斯大饭店订了房间。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "What few guests we were had quickly come to recognize one another by sight.", zh: "我们仅有的几个客人很快就混了个脸熟。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Beyond the polite nods we exchanged as we passed.", zh: "除了在擦肩而过时礼貌地点头之外。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "I had established a casual and bantering familiarity with the hotel's concierge.", zh: "我与酒店的礼宾员建立了一种随意的、爱开玩笑的熟稔关系。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "He takes only a single-bed sleeping room without a bath.", zh: "他只住一间没有浴室的单人床睡房。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "In the rear corner of the top floor.", zh: "在顶楼后面的角落里。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "And it's smaller than the service elevator!", zh: "而且比服务电梯还小！", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "The thermal baths are very beautiful.", zh: "温泉浴场非常漂亮。", m: "布达佩斯大饭店", c: "观光游览" },
+            { en: "But I love it all just the same, this enchanting old ruin.", zh: "但我依然爱着这一切，这迷人的古老废墟。", m: "布达佩斯大饭店", c: "观光游览" },
+            { en: "How did you come to buy it, if I may ask?", zh: "请问你是怎么买下它的？", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "May I invite you to dine with me tonight?", zh: "我可以邀请你今晚和我共进晚餐吗？", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "Two ducks roasted with olives.", zh: "两只橄榄烤鸭。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "Bring the table to the window.", zh: "把桌子搬到窗边。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "Bring the tray to the table.", zh: "把托盘端到桌上。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "Right away, Monsieur Gustave.", zh: "马上就来，古斯塔夫先生。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Pack them in the hat boxes.", zh: "把它们装进帽盒里。", m: "布达佩斯大饭店", c: "行李物品" },
+            { en: "Second trunk.", zh: "第二个行李箱。", m: "布达佩斯大饭店", c: "行李物品" },
+            { en: "Who has the tickets?", zh: "谁拿着票？", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "These are in order.", zh: "这些都准备好了。", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "I'm not leaving.", zh: "我不走。", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "You're always anxious before you travel.", zh: "你旅行前总是很焦虑。", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "Run to the cathedral of Santa Maria in Brucknerplatz.", zh: "跑到布鲁克纳广场的圣玛利亚大教堂去。", m: "布达佩斯大饭店", c: "观光游览" },
+            { en: "And take back four Klubecks in change.", zh: "并拿回四个克鲁贝克的找零。", m: "布达佩斯大饭店", c: "购物消费" },
+            { en: "Go to Mendl's and get me a courtesan au chocolat.", zh: "去曼德尔饼店给我买个巧克力泡芙。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "I'm Zero, sir. The new Lobby Boy.", zh: "我是Zero，先生。新来的大堂门童。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "You're now going to be officially interviewed.", zh: "你现在要接受正式面试了。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Experience?", zh: "经历？", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Hotel Kinski, Kitchen Boy, six months.", zh: "金斯基酒店，厨房杂工，六个月。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Why do you want to be a Lobby Boy?", zh: "你为什么想当大堂门童？", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Well, who wouldn't, at the Grand Budapest, sir?", zh: "在布达佩斯大饭店，谁不想呢，先生？", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "It's an institution.", zh: "它是一个标志性机构。", m: "布达佩斯大饭店", c: "观光游览" },
+            { en: "Were you ever a Lobby Boy, sir?", zh: "您做过大堂门童吗，先生？", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "What is a Lobby Boy?", zh: "什么是大堂门童？", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "A Lobby Boy's completely invisible, yet always in sight.", zh: "大堂门童是完全隐形的，却又总是随叫随到。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "A Lobby Boy anticipates the client's needs before the needs are needed.", zh: "大堂门童要在客人开口前预知他们的需求。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "A Lobby Boy is, above all, discreet to a fault.", zh: "最重要的是，大堂门童必须绝对谨慎。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Our guests know their deepest secrets, will go with us to our graves.", zh: "我们的客人知道，他们最深的秘密将随我们带入坟墓。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "I worked six days each week plus a half-day Sunday.", zh: "我每周工作六天，外加周日半天。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "5:00 AM until just after midnight.", zh: "从早上5点一直到午夜刚过。", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "Our meals were small but frequent, for stamina.", zh: "我们少吃多餐，为了保持体力。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "His own dinner, he took alone in his room.", zh: "他自己的晚餐，则独自在房间里吃。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "I need you to help me with my bags and so on.", zh: "我需要你帮我拿行李等等。", m: "布达佩斯大饭店", c: "行李物品" },
+            { en: "How fast can you pack?", zh: "你打包行李有多快？", m: "布达佩斯大饭店", c: "行李物品" },
+            { en: "Five minutes.", zh: "五分钟。", m: "布达佩斯大饭店", c: "行李物品" },
+            { en: "And bring a bottle of the Pouilly-Jouvet '26 in an ice bucket with two glasses.", zh: "带上一瓶装在冰桶里的26年Pouilly-Jouvet，还有两个杯子。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "So we don't have to drink the cat piss they serve in the dining car.", zh: "这样我们就不用喝餐车里提供的劣质酒了。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "Why are we stopping at a barley field?", zh: "我们为什么停在麦田里？", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "Documents, please.", zh: "请出示证件。", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "With pleasure.", zh: "很乐意。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "That's a Migratory Visa with Stage Three Worker Status.", zh: "那是带有三级工人身份的移民签证。", m: "布达佩斯大饭店", c: "机场航班" },
+            { en: "Come outside, please.", zh: "请到外面来。", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "His papers are in order.", zh: "他的证件是齐全的。", m: "布达佩斯大饭店", c: "机场航班" },
+            { en: "He'll need to apply for a revised Special Transit Permit.", zh: "他需要申请修改后的特别过境许可。", m: "布达佩斯大饭店", c: "机场航班" },
+            { en: "Which at this point may be very difficult to acquire.", zh: "这在目前可能很难获得。", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "A glass of chilled water with no ice, please.", zh: "请给我一杯冰水，不要加冰块。", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "I'll die with this picture above my bed.", zh: "我死的时候这张画要挂在我的床头。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Actually, we should sell it.", zh: "实际上，我们应该把它卖了。", m: "布达佩斯大饭店", c: "购物消费" },
+            { en: "Let's make a solemn blood-pact.", zh: "让我们订立一个庄严的血誓。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Then leave the country and lay low somewhere.", zh: "然后离开这个国家，找个地方避避风头。", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "In exchange for your help, your loyalty.", zh: "作为对你的帮助和忠诚的交换。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "I pledge to you 1.5% of the net sale price.", zh: "我向你保证净售价的1.5%。", m: "布达佩斯大饭店", c: "购物消费" },
+            { en: "Plus room and board.", zh: "外加食宿。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Tell them I'll be right down.", zh: "告诉他们我马上就下去。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Have you ever been questioned by the authorities?", zh: "你曾被当局盘问过吗？", m: "布达佩斯大饭店", c: "求助应急" },
+            { en: "How may we serve you, gentlemen?", zh: "先生们，我们能为您做点什么？", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "You have an alibi?", zh: "你有不在场证明吗？", m: "布达佩斯大饭店", c: "求助应急" },
+            { en: "I'm looking for Serge X.", zh: "我在找Serge X。", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "You're his sister? Seen him lately?", zh: "你是他姐姐？最近见过他吗？", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "I need to find him right away.", zh: "我需要马上找到他。", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "The Grand Budapest remains in your hands, as does its impeccable reputation.", zh: "布达佩斯大饭店依然交在你们手上，还有它无可挑剔的声誉。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Take extra special care of every little-bitty bit of it.", zh: "要格外小心地照看它的每一个角落。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "We got fake documents, second-hand street clothes.", zh: "我们有假证件、二手街头服装。", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "But we need digging tools.", zh: "但我们需要挖掘工具。", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "Are you ill, Mr. Moustafa?", zh: "您生病了吗，穆斯塔法先生？", m: "布达佩斯大饭店", c: "求助应急" },
+            { en: "I finally asked.", zh: "我终于问道。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "It's only that I don't know how to proceed.", zh: "只是我不知道该如何继续说下去。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Will you marry me? Yes.", zh: "你愿意嫁给我吗？我愿意。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "I'm only interviewing this vision of loveliness on your behalf.", zh: "我只是代表你在面试这位可爱的女士。", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Is he flirting with you?", zh: "他在跟你调情吗？", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Something's missing. A crucial document, either misplaced or, conceivably, destroyed.", zh: "少了点什么。一份关键文件，不是放错了地方，就是被销毁了。", m: "布达佩斯大饭店", c: "行李物品" },
+            { en: "Which way to the safe house?", zh: "安全屋怎么走？", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "We'll just have to wing it, I suppose.", zh: "我想我们只好见机行事了。", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "Let's put on our disguises.", zh: "我们换上伪装吧。", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "Give me a few squirts of perfume, please, will you?", zh: "请给我喷几下香水好吗？", m: "布达佩斯大饭店", c: "出行准备" },
+            { en: "I forgot the perfume.", zh: "我忘了带香水。", m: "布达佩斯大饭店", c: "行李物品" },
+            { en: "This is disgraceful, and it's beneath the standards of the Grand Budapest.", zh: "这太丢人了，有失布达佩斯大饭店的水准。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "I apologize on behalf of the hotel.", zh: "我代表酒店道歉。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Operator, get me the Excelsior Palace in Baden-Jurgen.", zh: "接线员，帮我接卓越皇宫酒店。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "And reverse the charges, please.", zh: "请对方付费。", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "How does one secure a corner table at Chez Dominique on a Thursday?", zh: "怎么才能在周四预订到多米尼克餐厅的角落餐桌？", m: "布达佩斯大饭店", c: "餐饮娱乐" },
+            { en: "Straight down the corniche, then left.", zh: "沿着滨海大道一直走，然后左转。", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "Your train departs in four and a half minutes. Here's your tickets.", zh: "你的火车还有四分半钟就要开了。这是你的票。", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "Where you headed, mister? Skiing? Sledding? Mountain climbing?", zh: "你要去哪，先生？滑雪？滑雪橇？爬山？", m: "布达佩斯大饭店", c: "观光游览" },
+            { en: "Are you Monsieur Gustave of the Grand Budapest Hotel in Nebelsbad?", zh: "您是布达佩斯大饭店的古斯塔夫先生吗？", m: "布达佩斯大饭店", c: "社交搭讪" },
+            { en: "Get on the next cable car.", zh: "上下一辆缆车。", m: "布达佩斯大饭店", c: "交通出行" },
+            { en: "We've booked you and your sisters into the King Ferdinand Suite.", zh: "我们为您和您的姐妹们预订了费迪南德国王套房。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "Have you seen a pastry girl with a package under her arm?", zh: "你有没有看到一个腋下夹着包裹的糕点女孩？", m: "布达佩斯大饭店", c: "求助沟通" },
+            { en: "You haven't been trained properly.", zh: "你没有受过良好的训练。", m: "布达佩斯大饭店", c: "酒店住宿" },
+            { en: "A Lobby Boy never provides information of that kind.", zh: "大堂门童绝不提供那种信息。", m: "布达佩斯大饭店", c: "酒店住宿" }
+        ];
+
+        const App = {
+            data() {
+                return {
+                    corpus: corpusData,
+                    searchQuery: '',
+                    selectedMovie: '全部',
+                    selectedCategory: '全部',
+                    movies: ['全部', '爱在黎明破晓前', '白日梦想家', '迷失东京', '布达佩斯大饭店'],
+                    categories: ['全部', '机场航班', '交通出行', '酒店住宿', '餐饮娱乐', '观光游览', '购物消费', '社交搭讪', '求助沟通', '求助应急', '行李物品', '出行准备'],
+                    showToast: false,
+                    synth: window.speechSynthesis
+                }
+            },
+            computed: {
+                filteredCorpus() {
+                    return this.corpus.filter(item => {
+                        const matchSearch = item.en.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                            item.zh.includes(this.searchQuery);
+                        const matchMovie = this.selectedMovie === '全部' || item.m === this.selectedMovie;
+                        const matchCategory = this.selectedCategory === '全部' || item.c === this.selectedCategory;
+                        return matchSearch && matchMovie && matchCategory;
+                    });
+                }
+            },
+            methods: {
+                async copyText(en, zh, event) {
+                    const textToCopy = `${en}\n${zh}`;
+                    try {
+                        await navigator.clipboard.writeText(textToCopy);
+                        this.showSuccessToast();
+                        
+                        // Icon change animation
+                        const icon = event.currentTarget.querySelector('i');
+                        icon.setAttribute('data-lucide', 'check');
+                        lucide.createIcons();
+                        setTimeout(() => {
+                            icon.setAttribute('data-lucide', 'copy');
+                            lucide.createIcons();
+                        }, 2000);
+                        
+                    } catch (err) {
+                        // Fallback for older browsers
+                        const textArea = document.createElement("textarea");
+                        textArea.value = textToCopy;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            this.showSuccessToast();
+                        } catch (err) {
+                            console.error('Failed to copy', err);
+                        }
+                        document.body.removeChild(textArea);
+                    }
+                },
+                showSuccessToast() {
+                    this.showToast = true;
+                    setTimeout(() => {
+                        this.showToast = false;
+                    }, 2500);
+                },
+                speak(text) {
+                    if (this.synth.speaking) {
+                        this.synth.cancel();
+                    }
+                    const utterThis = new SpeechSynthesisUtterance(text);
+                    utterThis.lang = 'en-US';
+                    utterThis.rate = 0.9; // 稍微放慢语速方便跟读
+                    this.synth.speak(utterThis);
+                }
+            },
+            mounted() {
+                // Initialize Lucide icons after mount
+                lucide.createIcons();
+            },
+            updated() {
+                // Re-initialize icons when DOM updates
+                lucide.createIcons();
+            }
+        };
+
+        createApp(App).mount('#app');
+    </script>
+</body>
+</html>
